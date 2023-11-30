@@ -1,35 +1,14 @@
 from lib.occ_transaction import OCCTransaction
 from lib.task import Task
+from lib.parser import parse
 
 class OCC:
-  def __init__(self):
-    self.task_list: list[Task] = []
-    self.num_transactions = 0
-    self.transactions = []
+  def __init__(self, filename: str):
+    num_transactions, task_list, transactions = parse(filename=filename, parser_type='occ')
+    self.task_list: list[Task] = task_list
+    self.num_transactions = num_transactions
+    self.transactions = transactions
     self.timestamp = 1
-  
-  def parse(self, filename):
-    f = open(filename, 'r')
-    tasks = [line.strip() for line in f.readlines()]
-    
-    for t in tasks:
-      if t[0].upper() == 'W' or t[0].upper() == 'R' and '(' in t and ')' in t:
-        open_bracket_idx = t.index('(')
-        close_bracket_idx = t.index(')')
-        
-        if open_bracket_idx > close_bracket_idx:
-          print("Invalid Bracket Input")
-          break
-        
-        if(int(t[1:open_bracket_idx]) > self.num_transactions):
-          self.num_transactions = int(t[1:open_bracket_idx])
-          
-        self.task_list.append(Task(t[0], int(t[1:open_bracket_idx]), t[open_bracket_idx+1:close_bracket_idx]))
-        
-      if t[0].upper() == 'C':
-        self.task_list.append(Task(t[0], int(t[1:open_bracket_idx]), ''))
-      
-    self.transactions = [OCCTransaction(i) for i in range(1, self.num_transactions + 1)]
   
   def validate(self, check_transaction: OCCTransaction):
     valid = True
@@ -111,6 +90,5 @@ class OCC:
       
   
 if __name__ == "__main__":
-  occ = OCC()
-  occ.parse('tc2.txt')
+  occ = OCC('test2.txt')
   occ.start()
