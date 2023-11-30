@@ -5,10 +5,12 @@ from lib.parser import parse
 class OCC:
   def __init__(self, filename: str):
     num_transactions, task_list, transactions = parse(filename=filename, parser_type='occ')
-    self.task_list: list[Task] = task_list
+    self.init_task_list: list[Task] = task_list
+    self.task_list: list[Task] = self.init_task_list
     self.num_transactions = num_transactions
     self.transactions = transactions
     self.timestamp = 1
+    self.result: list[Task] = []
   
   def validate(self, check_transaction: OCCTransaction):
     valid = True
@@ -22,15 +24,6 @@ class OCC:
       if transaction.num != check_transaction.num:
         ti_finishTS = transaction.finish
         ti_validationTS = transaction.validation
-        
-        # print("---")
-        # print(ti_validationTS)
-        # print(tj_validationTS)
-        # print(ti_finishTS)
-        # print(tj_startTS)
-        # print(tj_startTS)
-        # print(ti_finishTS)
-        # print(tj_validationTS)
 
         if(ti_validationTS < tj_validationTS):
           '''
@@ -40,13 +33,19 @@ class OCC:
             by Ti does not intersect with the set of data items ready by Tj
           then, validation succeeds, and Tj can be committed
           '''
-          if((ti_finishTS < tj_startTS) or (tj_startTS < ti_finishTS and ti_finishTS < tj_validationTS)):
+          if(ti_finishTS < tj_startTS):
+            continue
+          elif (tj_startTS < ti_finishTS and ti_finishTS < tj_validationTS):
             elmt_intersect = False
+            conflict = None
             for write in transaction.write_set:
               if write in check_transaction.read_set:
                 elmt_intersect = True
+                conflict = write
+                break
             if elmt_intersect:
-              print("Found intersect element")
+              print("[Found Intersect Element]")
+              print(f"T{check_transaction.num} conflict with T{transaction.num} by having an intersect element: {conflict}")
               valid = False
               break
           else:
@@ -67,27 +66,71 @@ class OCC:
         current_transaction.start = self.timestamp
       
       if(current_task.type == 'C'):
-        print("Committing...")
+        print(f"Trying to commit T{current_transaction.num}")
         if self.validate(current_transaction):
-          print("Valid")
+          # print("Valid")
           current_transaction.finish = self.timestamp
           current_transaction.commit()
+          print(f"T{current_transaction.num} is committed")
+          for t in current_transaction.write_set:
+            print(f"T{current_transaction.num} writes {t} from temporary local variable to database")
+          self.result.append(current_task)
         else:
-          print("Something is not right")
+          # print("Something is not right")
+          # Set new StartTS
+          current_transaction.start = self.timestamp
+          current_transaction.read_set.clear()
+          current_transaction.write_set.clear()
+          
+          # Make a temp containing tasks before abort
+          temp = self.task_list[:index+1].copy()
+          
+          # Add conflict transaction tasks to temp
+          for task in current_transaction.log_records:
+            temp.append(task)
+            
+          # Add commit task on the conflict transaction
+          temp.append(Task("C", current_transaction.num, ""))
+          
+          not_proccessed = self.task_list[index+1:].copy()
+          
+          # If there are still not proccessed task, put after rollback
+          for task in not_proccessed:
+            temp.append(task)
+            
+          self.task_list = temp 
       
       elif(current_task.type == 'R'):
-        print("Reading...")
+        print(f"T{current_transaction.num} reads {current_task.item}")
         current_transaction.read(current_task)
+        self.result.append(current_task)
         
       elif(current_task.type == 'W'):
-        print("Writing...")
+        print(f"T{current_transaction.num} writes {current_task.item} to temporary local variable")
         current_transaction.write(current_task)
+        self.result.append(current_task)
         
       self.timestamp+=1
       index+=1
-    for t in self.transactions:
-      print(t)
-      
+    # for t in self.transactions:
+    #   print(t)
+    print()
+    
+    print("Initialize Schedule: ")
+    for task in self.init_task_list:
+      if task.type == 'C':
+        print(f"{task.type}{task.num}", end=" ")
+      else:
+        print(f"{task.type}{task.num}({task.item})", end=" ")
+        
+    print()
+    
+    print("Final Schedule: ")
+    for task in self.result:
+      if task.type == 'C':
+        print(f"{task.type}{task.num}", end=" ")
+      else:
+        print(f"{task.type}{task.num}({task.item})", end=" ")
   
 if __name__ == "__main__":
   occ = OCC('test2.txt')

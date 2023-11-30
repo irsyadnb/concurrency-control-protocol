@@ -9,12 +9,15 @@ class OCCTransaction:
     self.finish = 0
     self.validation = 0
     self.is_commit = False
+    self.log_records = []
   
   def read(self, task: Task):
     self.read_set.append(task.item)
+    self.log_records.append(task)
     
   def write(self, task: Task):
     self.write_set.append(task.item)
+    self.log_records.append(task)
   
   def commit(self):
     self.is_commit = True
