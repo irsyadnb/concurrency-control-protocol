@@ -4,18 +4,25 @@ from lib.parser import *
 
 class TwoPL:
     def __init__(self, filename: str):
-        num_transactions, task_list, transactions = parse(filename=filename,parser_type='twopl')
+        self.num_transactions, task_list, transactions = parse(filename=filename,parser_type='twopl')
         self.task_list: list[Task] = task_list
         self.sequence = deque(self.task_list)
-        self.num_transactions = num_transactions
         self.transactions = transactions
         self.lock_table = {}
         self.queue = deque()
         self.completed=deque()
+        self.final_schedule = deque()
+        self.age={}
         self.incomplete_schedule= {}
-        self.transaction_table = {}
-        self.res = [] # print result
     
+    def insertAge(self):
+        x = 0
+        for task in self.task_list:
+            if(task.num not in self.age.keys()):
+                self.age[task.num] = x
+                x+=1
+        print(self.age)
+
     def getNumInLockTable(self, item: str, num: int) -> int:
         if item in self.lock_table:
             matching_tuples = [i for i, (t_num, _) in enumerate(self.lock_table[item]) if t_num == num]
@@ -42,8 +49,17 @@ class TwoPL:
 
         self.sequence = deque(task for task in self.sequence if task.num != t_num)
 
+    def addTaskToSeqByNum(self, t_num:int):
+        idx = 0
+        while idx < len(self.queue):
+            if self.queue[idx].num == t_num:
+                self.sequence.append(self.queue[idx])
+            idx+=1
+
+        self.queue = deque(task for task in self.queue if task.num != t_num)
+
     # True if lock granted, False if not
-    def share_lock(self, task: Task) -> bool:
+    def shareLock(self, task: Task) -> bool:
         item = task.item
         t_num = task.num
         if item not in self.lock_table:
@@ -63,8 +79,8 @@ class TwoPL:
                 return True
         else:
             # Wait Die Mechanism
-            # assume the bigger the number, the newer the transaction
-            if self.lock_table[item][0][0] > t_num:
+            tNum_lock = self.lock_table[item][0][0]
+            if self.age[tNum_lock] > self.age[t_num]:
                 # older transaction is holding the lock
                 print("[.] T" + str(t_num) + " is waiting Lock on " + item)
                 self.queue.append(task)
@@ -77,7 +93,7 @@ class TwoPL:
                 self.completed.append(Task(type="A", num=t_num, item=''))
                 return False
         
-    def exclusive_lock(self, task: Task)->bool:
+    def exclusiveLock(self, task: Task)->bool:
         item = task.item
         t_num = task.num
         if item not in self.lock_table:
@@ -99,8 +115,8 @@ class TwoPL:
                     return True
                 
             # Wait Die Mechanism
-            # assume the bigger the number, the newer the transaction
-            if self.lock_table[item][0][0] > t_num:
+            tNum_lock = self.lock_table[item][0][0]
+            if self.age[tNum_lock] > self.age[t_num]:
                 # older transaction is holding the lock
                 self.queue.append(task)
                 self.addTaskToQueueByNum(t_num)
@@ -116,15 +132,16 @@ class TwoPL:
     # unlock all keys that hold by t_num, if the item is empty after unlock, delete the item
     def unlock(self, t_num: int):
         key_lists = list(self.lock_table.keys())        
-        for i in range(len(key_lists)):
-            key = key_lists[i]
-            for j in range(len(self.lock_table[key])):
-                if self.lock_table[key][j][0] == t_num:
-                    self.lock_table[key].pop(j)
+        for key in key_lists:
+            tasks = self.lock_table[key][:]
+            for task in tasks:
+                if task[0] == t_num:
+                    self.lock_table[key].remove(task)
                     self.completed.append(Task(type="UL", num=t_num, item=key))
                     print("[-] Unlock T" + str(t_num) + " on " + key)
-                if not self.lock_table[key]:
-                    del self.lock_table[key]
+            if not self.lock_table[key]:
+                del self.lock_table[key]
+
 
     def clearQbyNum(self, t_num: int):
         self.queue = deque(task for task in self.queue if task.num != t_num)
@@ -132,14 +149,14 @@ class TwoPL:
     def rollback(self, task: Task):
         t_num = task.num
         idx = 0
+        self.clearQbyNum(t_num)
         while idx < len(self.completed):
             if self.completed[idx].num == t_num:
                 if self.completed[idx].type == 'R' or self.completed[idx].type == 'W':
                     self.queue.append(self.completed[idx])  
             idx += 1
 
-        self.completed = deque(task for task in self.completed if task.num != t_num)
-        self.clearQbyNum(t_num)
+        # self.completed = deque(task for task in self.completed if task.num != t_num)
         self.queue.append(task)
         self.addTaskToQueueByNum(t_num)
         self.unlock(t_num)
@@ -156,6 +173,7 @@ class TwoPL:
 
     def start(self):
         while self.sequence or self.queue:
+            print(self.lock_table)
             if len(self.queue) > 0:
                 if self.queue[0].item not in self.lock_table.keys():
                     self.sequence.appendleft(self.queue.popleft())
@@ -163,8 +181,9 @@ class TwoPL:
 
             # Move queue to sequence if sequence is empty
             if(not self.sequence):
-                self.sequence = self.queue
+                self.addTaskToSeqByNum(self.queue[0].num)
             
+            self.printTaskSequence(self.sequence)
             current_task = self.sequence.popleft()
             print ("Current Task: "+ str(current_task))
             if (self.checkIncompleteSchedule(current_task.num)):
@@ -179,17 +198,16 @@ class TwoPL:
                 current_transaction.commit()
             
             elif(current_task.type == 'R'):
-                shared_lock = self.share_lock(current_task)
+                shared_lock = self.shareLock(current_task)
                 if shared_lock:
                     self.completed.append(current_task)
                     print(f"[>] T{current_task.num} Reading {current_task.item}")
                     current_transaction.read(current_task)
-                    self.transaction_table[current_task.num] = current_task.item
                 else:
                     self.incomplete_schedule[current_task.num] = True
 
             elif(current_task.type == 'W'):
-                exclusive_lock = self.exclusive_lock(current_task)
+                exclusive_lock = self.exclusiveLock(current_task)
                 if exclusive_lock:
                     print(f"[>] T{current_task.num} Writing {current_task.item}")
                     current_transaction.write(current_task)
@@ -205,13 +223,30 @@ class TwoPL:
         
         print("Initial schedule: ", end="")
         self.printTaskSequence(self.task_list)
-        print("Final schedule: ", end="")
+        print("Schedule with Abort: ", end="")
         self.printTaskSequence(self.completed)
+        self.finalSchedule()
     
-    def writeToFile(self, outputPath: str):
-        write(f"result_{outputPath}.txt", self.completed)
+    def writeToFile(self, outputPath: str, list: deque):
+        write(f"result_{outputPath}.txt", list)
+
+    def finalSchedule(self):
+        index ={}
+        for task in self.completed:
+            if task.type == 'A':
+                index[task.num] = self.completed.index(task)
+            
+        for task in self.completed:
+            curr_idx = self.completed.index(task)
+            if task.num in index.keys():
+                if curr_idx<=index[task.num]:
+                    continue
+            self.final_schedule.append(task)
+        print("Final Schedule: ", end="")
+        self.printTaskSequence(self.final_schedule)
   
 if __name__ == "__main__":
   twopl = TwoPL('test4.txt')
+  twopl.insertAge()
   twopl.start()
-  twopl.writeToFile('4')
+  twopl.writeToFile('4', twopl.completed)
