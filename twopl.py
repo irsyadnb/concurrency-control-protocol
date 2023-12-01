@@ -173,7 +173,6 @@ class TwoPL:
 
     def start(self):
         while self.sequence or self.queue:
-            print(self.lock_table)
             if len(self.queue) > 0:
                 if self.queue[0].item not in self.lock_table.keys():
                     self.sequence.appendleft(self.queue.popleft())

@@ -12,3 +12,11 @@ Run the desired simulation with the following command:
 Insert filename of the file input in the test folder on each file Main constructor.
 
 The final schedule will be saved on the out folder.
+
+## Author
+| Name                     | Student ID |
+|--------------------------|------------|
+| Irsyad Nurwidianto Basuki         | 13521072   |
+| Austin Gabriel Pardosi | 13521084   | 
+| Alexander Jason          | 13521100   |
+| Muhammad Naufal Nalendra  | 13521152   |
