@@ -1,5 +1,6 @@
-from .task import Task
-from .occ_transaction import OCCTransaction
+from lib.task import Task
+from lib.occ_transaction import OCCTransaction
+from lib.transaction import Transaction
 
 def parse(filename: str, parser_type: str):
   f = open('test/' + filename, 'r')
@@ -29,3 +30,15 @@ def parse(filename: str, parser_type: str):
   if parser_type.lower() == 'occ':
     transactions = [OCCTransaction(i) for i in range(1, num_transactions + 1)]
     return num_transactions, task_list, transactions
+  else:
+    transactions = [Transaction(i) for i in range(1, num_transactions + 1)]
+    return num_transactions, task_list, transactions
+
+
+def write(fileName: str, data: list): 
+    file = open("../output/" + fileName, "w")
+
+    for d in data:
+        file.write(f'{d}\n')
+    
+    file.close()
