@@ -1,6 +1,6 @@
 from lib.occ_transaction import OCCTransaction
 from lib.task import Task
-from lib.parser import parse
+from lib.parser import *
 
 class OCC:
   def __init__(self, filename: str):
@@ -132,6 +132,10 @@ class OCC:
       else:
         print(f"{task.type}{task.num}({task.item})", end=" ")
   
+  def writeToFile(self, outputPath: str):
+    write(f"result_{outputPath}.txt", self.result)
+
 if __name__ == "__main__":
   occ = OCC('test2.txt')
   occ.start()
+  occ.writeToFile('test2')

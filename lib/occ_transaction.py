@@ -1,4 +1,4 @@
-from .task import Task
+from lib.task import Task
 
 class OCCTransaction:
   def __init__(self, num: int):

@@ -36,7 +36,7 @@ def parse(filename: str, parser_type: str):
 
 
 def write(fileName: str, data: list): 
-    file = open("../output/" + fileName, "w")
+    file = open("out/" + fileName, "w")
 
     for d in data:
         file.write(f'{d}\n')
