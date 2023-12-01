@@ -21,7 +21,6 @@ class TwoPL:
             if(task.num not in self.age.keys()):
                 self.age[task.num] = x
                 x+=1
-        print(self.age)
 
     def getNumInLockTable(self, item: str, num: int) -> int:
         if item in self.lock_table:

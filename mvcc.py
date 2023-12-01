@@ -82,5 +82,5 @@ class MVCC:
         print()
 
 if __name__ == "__main__":
-  mvcc = MVCC('test5.txt')
+  mvcc = MVCC('test1.txt')
   mvcc.run()
