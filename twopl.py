@@ -161,7 +161,7 @@ class TwoPL:
         self.addTaskToQueueByNum(t_num)
         self.unlock(t_num)
 
-    def printTaskSequence(self, tasks: list[Task]):
+    def printTaskSequence(self, tasks: [Task]):
         for task in tasks:
             print(str(task), end=" ")
         print()
