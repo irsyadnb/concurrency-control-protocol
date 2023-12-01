@@ -46,6 +46,7 @@ class OCC:
             if elmt_intersect:
               print("[Found Intersect Element]")
               print(f"T{check_transaction.num} conflict with T{transaction.num} by having an intersect element: {conflict}")
+              print("Aborting...")
               valid = False
               break
           else:
@@ -76,14 +77,17 @@ class OCC:
             print(f"T{current_transaction.num} writes {t} from temporary local variable to database")
           self.result.append(current_task)
         else:
-          # print("Something is not right")
+          print(f"Rolling back T{current_task.num}")
           # Set new StartTS
           current_transaction.start = self.timestamp
           current_transaction.read_set.clear()
           current_transaction.write_set.clear()
-          
+                  
           # Make a temp containing tasks before abort
           temp = self.task_list[:index+1].copy()
+          
+          # Add A (Abort) task
+          temp.append(Task("A", current_transaction.num, ""))
           
           # Add conflict transaction tasks to temp
           for task in current_transaction.log_records:
@@ -110,6 +114,9 @@ class OCC:
         current_transaction.write(current_task)
         self.result.append(current_task)
         
+      elif(current_task.type == 'A'):
+        self.result.append(current_task)
+        
       self.timestamp+=1
       index+=1
     # for t in self.transactions:
@@ -127,7 +134,7 @@ class OCC:
     
     print("Final Schedule: ")
     for task in self.result:
-      if task.type == 'C':
+      if task.type == 'C' or task.type == 'A':
         print(f"{task.type}{task.num}", end=" ")
       else:
         print(f"{task.type}{task.num}({task.item})", end=" ")
