@@ -11,6 +11,7 @@ class TwoPL:
         self.lock_table = {}
         self.queue = deque()
         self.completed=deque()
+        self.final_schedule = deque()
         self.age={}
         self.incomplete_schedule= {}
         self.transaction_table = {}
@@ -225,14 +226,30 @@ class TwoPL:
         
         print("Initial schedule: ", end="")
         self.printTaskSequence(self.task_list)
-        print("Final schedule: ", end="")
+        print("Schedule with Abort: ", end="")
         self.printTaskSequence(self.completed)
+        self.finalSchedule()
     
-    def writeToFile(self, outputPath: str):
-        write(f"result_{outputPath}.txt", self.completed)
+    def writeToFile(self, outputPath: str, list: deque):
+        write(f"result_{outputPath}.txt", list)
+
+    def finalSchedule(self):
+        index ={}
+        for task in self.completed:
+            if task.type == 'A':
+                index[task.num] = self.completed.index(task)
+            
+        for task in self.completed:
+            curr_idx = self.completed.index(task)
+            if task.num in index.keys():
+                if curr_idx<=index[task.num]:
+                    continue
+            self.final_schedule.append(task)
+        print("Final Schedule: ", end="")
+        self.printTaskSequence(self.final_schedule)
   
 if __name__ == "__main__":
-  twopl = TwoPL('test3.txt')
+  twopl = TwoPL('test5.txt')
   twopl.insertAge()
   twopl.start()
-  twopl.writeToFile('3')
+  twopl.writeToFile('5', twopl.completed)
