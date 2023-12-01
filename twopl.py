@@ -181,7 +181,7 @@ class TwoPL:
             if(not self.sequence):
                 self.addTaskToSeqByNum(self.queue[0].num)
             
-            self.printTaskSequence(self.sequence)
+            # self.printTaskSequence(self.sequence)
             current_task = self.sequence.popleft()
             print ("Current Task: "+ str(current_task))
             if (self.checkIncompleteSchedule(current_task.num)):
